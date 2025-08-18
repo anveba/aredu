@@ -6,20 +6,30 @@ using System.Collections.ObjectModel;
 public class ModelPlacer : MonoBehaviour
 {
     [SerializeField] private TagDetector _detector = null;
-    public bool EnableStaling = false;
-    [SerializeField] private float _staleTime = 10.0f;
-    [SerializeField] private int _maxAccumulatedDetections = 30;
+    public bool EnableStaling = true;
+    [SerializeField] private float _staleTime = 5.0f;
+    [SerializeField] private int _maxAccumulatedDetections = 1000;
+    [SerializeField] private float _filterAngle = 10.0f;
+    [SerializeField] private float _filterPosition = 0.1f;
 
     private Dictionary<int, Queue<TagDetector.Detection>> _accumulatedDetections;
     private Dictionary<Transform, ReadOnlyCollection<TagPlacement>> _associatedTagPlacements;
-    private Dictionary<int, Tuple<Vector3, Quaternion>> _tagTransforms;
+    private Dictionary<int, TagTransform> _tagTransforms;
+
+    private struct TagTransform
+    {
+        public Vector3 SmoothedPosition;
+        public Quaternion SmoothedRotation;
+        public Vector3 AveragePosition;
+        public Quaternion AverageRotation;
+    } 
     
 
     private void Start()
     {
         _accumulatedDetections = new Dictionary<int, Queue<TagDetector.Detection>>();
         _associatedTagPlacements = new Dictionary<Transform, ReadOnlyCollection<TagPlacement>>();
-        _tagTransforms = new Dictionary<int, Tuple<Vector3, Quaternion>>();
+        _tagTransforms = new Dictionary<int, TagTransform>();
     }
 
     public void SetModelPlacement(Transform modelTransform, ReadOnlyCollection<TagPlacement> placements)
@@ -73,7 +83,9 @@ public class ModelPlacer : MonoBehaviour
     private void UpdateTagTransforms()
     {
         List<Vector3> positions = new List<Vector3>(_maxAccumulatedDetections);
+        List<Vector3> filteredPositions = new List<Vector3>(_maxAccumulatedDetections);
         List<Quaternion> rotations = new List<Quaternion>(_maxAccumulatedDetections);
+        List<Quaternion> filteredRotations = new List<Quaternion>(_maxAccumulatedDetections);
         foreach (int id in _accumulatedDetections.Keys)
         {
             positions.Clear();
@@ -89,7 +101,21 @@ public class ModelPlacer : MonoBehaviour
                 rotations.Add(d.Rotation);
             }
 
-            _tagTransforms[id] = new Tuple<Vector3, Quaternion>(AveragePosition(positions.AsReadOnly()), AverageRotation(rotations.AsReadOnly()));
+            Vector3 averagePosition = AveragePosition(positions.AsReadOnly());
+            Quaternion averageRotation = AverageRotation(rotations.AsReadOnly());
+
+            foreach (TagDetector.Detection d in detections)
+            {
+                if (Vector3.Distance(averagePosition, d.Position) <= _filterPosition) // TODO use standard deviation(s) instead of a fixed value?
+                    filteredPositions.Add(d.Position);
+                if (Quaternion.Angle(averageRotation, d.Rotation) <= _filterAngle)
+                    filteredRotations.Add(d.Rotation);
+            }
+
+            Vector3 smoothedPosition = filteredPositions.Count > 0 ? AveragePosition(filteredPositions.AsReadOnly()) : averagePosition;
+            Quaternion smoothedRotation = filteredRotations.Count > 0 ? AverageRotation(filteredRotations.AsReadOnly()) : averageRotation;
+
+            _tagTransforms[id] = new TagTransform() { SmoothedPosition = smoothedPosition, SmoothedRotation = smoothedRotation, AveragePosition = averagePosition, AverageRotation = averageRotation};
         }
     }
 
@@ -104,8 +130,8 @@ public class ModelPlacer : MonoBehaviour
             {
                 if (!_tagTransforms.ContainsKey(p.TagID))
                     continue;
-                positions.Add(-(_tagTransforms[p.TagID].Item2 * p.Position) + _tagTransforms[p.TagID].Item1);
-                rotations.Add(Quaternion.Inverse(Quaternion.Euler(p.Rotation)) * _tagTransforms[p.TagID].Item2);
+                positions.Add(-(_tagTransforms[p.TagID].SmoothedRotation * p.Position) + _tagTransforms[p.TagID].SmoothedPosition);
+                rotations.Add(Quaternion.Inverse(Quaternion.Euler(p.Rotation)) * _tagTransforms[p.TagID].SmoothedRotation);
             }
 
             if (positions.Count == 0)

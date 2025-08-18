@@ -19,16 +19,18 @@ public class ARCameraSource : MonoBehaviour
         public double Timestamp { get; private set; }
         public int Width { get; private set; }
         public int Height { get; private set; }
+        public float? FOV { get; private set; }
         private Texture2D _cameraTexture;
         public Texture2D Texture => _cameraTexture;
         private NativeArray<byte> _nativeImageBuffer;
         public ReadOnlySpan<Color32> ImageBuffer => _nativeImageBuffer.Reinterpret<Color32>(1).AsReadOnlySpan();
 
-        public Frame(double timestamp, int width, int height, NativeArray<byte> nativeImageBuffer, Texture2D texture)
+        public Frame(double timestamp, int width, int height, float? fov, NativeArray<byte> nativeImageBuffer, Texture2D texture)
         {
             Timestamp = timestamp;
             Width = width;
             Height = height;
+            FOV = fov;
             _nativeImageBuffer = nativeImageBuffer;
             _cameraTexture = texture;
         }
@@ -108,7 +110,11 @@ public class ARCameraSource : MonoBehaviour
             Destroy(_cameraTexture);
         }
 
-        Frame frame = new Frame(image.timestamp, conversionParams.outputDimensions.x, conversionParams.outputDimensions.y, _nativeImageBuffer, _cameraTexture);
+        float? fov = null;
+        if (eventArgs.projectionMatrix.HasValue)
+            fov = Mathf.Atan(1.0f / eventArgs.projectionMatrix.Value.m11) * 2.0f;
+
+        Frame frame = new Frame(image.timestamp, conversionParams.outputDimensions.x, conversionParams.outputDimensions.y, fov, _nativeImageBuffer, _cameraTexture);
 
         image.Dispose();
 

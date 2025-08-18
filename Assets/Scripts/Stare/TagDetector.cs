@@ -106,6 +106,10 @@ public class TagDetector : MonoBehaviour
             return;
 
         GetCameraStatusDuringFrame(frame, out Vector3 cameraPosition, out Quaternion rawCameraRotation, out float fov);
+        
+        fov = frame.FOV.GetValueOrDefault(fov); // These FOVs should be and seemingly are the same.
+        if (SystemInfo.deviceType == DeviceType.Handheld)
+            fov = (fov / frame.Width) * frame.Height; // 'Flip' the FOV axis/dimension
 
         _detector.ProcessImage(frame.ImageBuffer, fov, _tagSize);
 
