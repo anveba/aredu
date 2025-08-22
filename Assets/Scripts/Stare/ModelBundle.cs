@@ -66,3 +66,17 @@ public class TagPlacement
     public Vector3 Position;
     public Vector3 Rotation;
 }
+
+public class LoadedModel
+{
+    public ModelBundle ModelBundle { get; private set; }
+    public GameObject GameObject { get; private set; }
+    public GameObject AdjustmentHandle { get; private set; }
+
+    public LoadedModel(ModelBundle modelBundle, GameObject gameObject, GameObject adjustmentHandle)
+    {
+        ModelBundle = modelBundle;
+        GameObject = gameObject;
+        AdjustmentHandle = adjustmentHandle;
+    }
+}

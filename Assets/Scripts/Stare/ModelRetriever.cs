@@ -2,15 +2,19 @@ using UnityEngine;
 using GLTFast;
 using System.Threading.Tasks;
 using System;
+using System.Collections.Generic;
 
 public class ModelRetriever : MonoBehaviour
 {
     [SerializeField] Transform _assetParent;
+    [SerializeField] private GameObject _adjustmentHandlePrefab;
+    private List<LoadedModel> loadedModels;
     private GltfImport _importer;
 
     private void Start()
     {
         _importer = new GltfImport();
+        loadedModels = new List<LoadedModel>();
     }
 
     public async Task<Tuple<GameObject, string>> Retrieve(ModelBundle models)
@@ -30,16 +34,28 @@ public class ModelRetriever : MonoBehaviour
             (GameObject obj, string error) = await tasks[i];
             if (obj == null)
             {
-                combinedError = combinedError == null ? error : combinedError + "\n" + error;   
+                combinedError = combinedError == null ? error : combinedError + "\n" + error;
                 continue;
             }
             obj.transform.parent = parent.transform;
         }
-        return new (parent, combinedError);
+
+        loadedModels.Add(new LoadedModel(models, parent, CreateAdjustmentHandle(models, parent)));
+        return new(parent, combinedError);
     }
 
+    private GameObject CreateAdjustmentHandle(ModelBundle models, GameObject parent, int referenceTag = 0)
+    {
+        GameObject handle = Instantiate(_adjustmentHandlePrefab, _assetParent.transform);
+        handle.name = models.Name + "_Handle";
+        handle.SetActive(false);
 
-    public async Task<Tuple<GameObject, string>> Retrieve(Model model)
+        PlacementAdjuster adjuster = handle.GetComponent<PlacementAdjuster>();
+        adjuster.SetModel(models, parent.transform, adjuster.transform, referenceTag);
+        return handle;
+    }
+
+    private async Task<Tuple<GameObject, string>> Retrieve(Model model)
     {
         // TODO caching
 
@@ -53,7 +69,7 @@ public class ModelRetriever : MonoBehaviour
 
         if (!success)
         {
-            return new (null, "Failed to retrieve model " + model.Name + " at " + model.Uri);
+            return new(null, "Failed to retrieve model " + model.Name + " at " + model.Uri);
         }
         else
         {
@@ -63,7 +79,12 @@ public class ModelRetriever : MonoBehaviour
             asset.transform.localPosition = Vector3.zero;
             asset.transform.localRotation = Quaternion.identity;
             await _importer.InstantiateMainSceneAsync(asset.transform);
-            return new (asset, null);
+            return new(asset, null);
         }
+    }
+    
+    public IReadOnlyCollection<LoadedModel> GetLoadedModels()
+    {
+        return loadedModels;
     }
 }

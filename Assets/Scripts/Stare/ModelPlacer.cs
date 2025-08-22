@@ -1,19 +1,17 @@
 using UnityEngine;
-using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
+using System.Linq;
 
 public class ModelPlacer : MonoBehaviour
 {
     [SerializeField] private TagDetector _detector = null;
     public bool EnableStaling = true;
-    [SerializeField] private float _staleTime = 5.0f;
     [SerializeField] private int _maxAccumulatedDetections = 1000;
     [SerializeField] private float _filterAngle = 10.0f;
     [SerializeField] private float _filterPosition = 0.1f;
 
     private Dictionary<int, Queue<TagDetector.Detection>> _accumulatedDetections;
-    private Dictionary<Transform, ReadOnlyCollection<TagPlacement>> _associatedTagPlacements;
+    private Dictionary<Transform, IReadOnlyCollection<TagPlacement>> _associatedTagPlacements;
     private Dictionary<int, TagTransform> _tagTransforms;
 
     private struct TagTransform
@@ -22,17 +20,17 @@ public class ModelPlacer : MonoBehaviour
         public Quaternion SmoothedRotation;
         public Vector3 AveragePosition;
         public Quaternion AverageRotation;
-    } 
-    
+    }
+
 
     private void Start()
     {
         _accumulatedDetections = new Dictionary<int, Queue<TagDetector.Detection>>();
-        _associatedTagPlacements = new Dictionary<Transform, ReadOnlyCollection<TagPlacement>>();
+        _associatedTagPlacements = new Dictionary<Transform, IReadOnlyCollection<TagPlacement>>();
         _tagTransforms = new Dictionary<int, TagTransform>();
     }
 
-    public void SetModelPlacement(Transform modelTransform, ReadOnlyCollection<TagPlacement> placements)
+    public void SetModelPlacement(Transform modelTransform, IReadOnlyCollection<TagPlacement> placements)
     {
         _associatedTagPlacements[modelTransform] = placements;
     }
@@ -54,11 +52,6 @@ public class ModelPlacer : MonoBehaviour
 
     private void TagsDetected(IEnumerable<TagDetector.Detection> tags)
     {
-        if (EnableStaling)
-            foreach (var q in _accumulatedDetections.Values)
-                while (q.Count > 0 && Time.time - q.Peek().Timestamp > _staleTime)
-                    q.Dequeue();
-        
         foreach (TagDetector.Detection tag in tags)
         {
             if (!_accumulatedDetections.ContainsKey(tag.TagID))
@@ -75,6 +68,14 @@ public class ModelPlacer : MonoBehaviour
                 q.Enqueue(tag);
             }
         }
+    }
+
+    private void Update()
+    {
+        if (EnableStaling)
+            foreach (var q in _accumulatedDetections.Values)
+                while (q.Count > 0 && Time.time - q.Peek().Timestamp > Settings.Current.Smoothing)
+                    q.Dequeue();
 
         UpdateTagTransforms();
         UpdateModelTransforms();
@@ -101,8 +102,8 @@ public class ModelPlacer : MonoBehaviour
                 rotations.Add(d.Rotation);
             }
 
-            Vector3 averagePosition = AveragePosition(positions.AsReadOnly());
-            Quaternion averageRotation = AverageRotation(rotations.AsReadOnly());
+            Vector3 averagePosition = AveragePosition(positions);
+            Quaternion averageRotation = AverageRotation(rotations);
 
             foreach (TagDetector.Detection d in detections)
             {
@@ -112,16 +113,16 @@ public class ModelPlacer : MonoBehaviour
                     filteredRotations.Add(d.Rotation);
             }
 
-            Vector3 smoothedPosition = filteredPositions.Count > 0 ? AveragePosition(filteredPositions.AsReadOnly()) : averagePosition;
-            Quaternion smoothedRotation = filteredRotations.Count > 0 ? AverageRotation(filteredRotations.AsReadOnly()) : averageRotation;
+            Vector3 smoothedPosition = filteredPositions.Count > 0 ? AveragePosition(filteredPositions) : averagePosition;
+            Quaternion smoothedRotation = filteredRotations.Count > 0 ? AverageRotation(filteredRotations) : averageRotation;
 
-            _tagTransforms[id] = new TagTransform() { SmoothedPosition = smoothedPosition, SmoothedRotation = smoothedRotation, AveragePosition = averagePosition, AverageRotation = averageRotation};
+            _tagTransforms[id] = new TagTransform() { SmoothedPosition = smoothedPosition, SmoothedRotation = smoothedRotation, AveragePosition = averagePosition, AverageRotation = averageRotation };
         }
     }
 
     private void UpdateModelTransforms()
     {
-        foreach ((Transform transform, ReadOnlyCollection<TagPlacement> placements) in _associatedTagPlacements)
+        foreach ((Transform transform, IReadOnlyCollection<TagPlacement> placements) in _associatedTagPlacements)
         {
             List<Vector3> positions = new List<Vector3>(placements.Count);
             List<Quaternion> rotations = new List<Quaternion>(placements.Count);
@@ -130,34 +131,34 @@ public class ModelPlacer : MonoBehaviour
             {
                 if (!_tagTransforms.ContainsKey(p.TagID))
                     continue;
-                positions.Add(-(_tagTransforms[p.TagID].SmoothedRotation * p.Position) + _tagTransforms[p.TagID].SmoothedPosition);
-                rotations.Add(Quaternion.Inverse(Quaternion.Euler(p.Rotation)) * _tagTransforms[p.TagID].SmoothedRotation);
+                positions.Add(_tagTransforms[p.TagID].SmoothedPosition - (_tagTransforms[p.TagID].SmoothedRotation * p.Position));
+                rotations.Add(_tagTransforms[p.TagID].SmoothedRotation * Quaternion.Inverse(Quaternion.Euler(p.Rotation)));
             }
 
             if (positions.Count == 0)
                 continue;
 
-            transform.localPosition = AveragePosition(positions.AsReadOnly());
-            transform.localRotation = AverageRotation(rotations.AsReadOnly());
+            transform.localPosition = AveragePosition(positions);
+            transform.localRotation = AverageRotation(rotations);
         }
     }
 
-    private Quaternion AverageRotation(ReadOnlyCollection<Quaternion> rotations)
+    private Quaternion AverageRotation(IReadOnlyCollection<Quaternion> rotations)
     {
-        Quaternion avg = rotations[0];
+        Quaternion avg = rotations.ElementAt(0);
         for (int i = 1; i < rotations.Count; i++)
         {
             float t = 1.0f / (i + 1.0f);
-            avg = Quaternion.Slerp(avg, rotations[i], t);
+            avg = Quaternion.Slerp(avg, rotations.ElementAt(i), t);
         }
         return avg;
     }
-    
-    private Vector3 AveragePosition(ReadOnlyCollection<Vector3> positions)
+
+    private Vector3 AveragePosition(IReadOnlyCollection<Vector3> positions)
     {
-        Vector3 avg = Vector3.zero;
+        Vector3 sum = Vector3.zero;
         for (int i = 0; i < positions.Count; i++)
-            avg += positions[i] / positions.Count;
-        return avg;
+            sum += positions.ElementAt(i);
+        return sum / positions.Count;
     }
 }

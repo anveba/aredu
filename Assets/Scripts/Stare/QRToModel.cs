@@ -31,13 +31,13 @@ public class QRToModel : MonoBehaviour
     {
         if (result.Text == null || result.Text.Length == 0)
         {
-            UserInterface.Instance.ReportScanFinished("QR code contents is empty.");
+            QRScanningUI.Instance.ReportScanFinished("QR code contents is empty.", isError: true);
             return;
         }
 
         if (_alreadyImportedCodes.Contains(result.Text))
         {
-            UserInterface.Instance.ReportScanFinished("QR code already scanned.");
+            QRScanningUI.Instance.ReportScanFinished("QR code already scanned.", isError: true);
             return;
         }
 
@@ -52,7 +52,7 @@ public class QRToModel : MonoBehaviour
             await request.SendWebRequest();
             if (request.result != UnityWebRequest.Result.Success)
             {
-                UserInterface.Instance.ReportScanFinished("Web request error: " + request.error);
+                QRScanningUI.Instance.ReportScanFinished("Web request error: " + request.error, isError: true);
                 return;
             }
             json = request.downloadHandler.text;
@@ -65,7 +65,7 @@ public class QRToModel : MonoBehaviour
         }
         catch (Exception e)
         {
-            UserInterface.Instance.ReportScanFinished("JSON parsing error: " + e.Message);
+            QRScanningUI.Instance.ReportScanFinished("JSON parsing error: " + e.Message, isError: true);
             return;
         }
 
@@ -74,20 +74,20 @@ public class QRToModel : MonoBehaviour
         string error;
         if (!modelBundle.IsValid(out error))
         {
-            UserInterface.Instance.ReportScanFinished(error);
+            QRScanningUI.Instance.ReportScanFinished(error, isError: true);
             return;
         }
 
-        UserInterface.Instance.ReportImportStarted();
+        QRScanningUI.Instance.ReportImportStarted();
 
         GameObject model;
         (model, error) = await _modelRetriever.Retrieve(modelBundle);
         if (error == null)
         {
             _alreadyImportedCodes.Add(result.Text);
-            _modelPlacer.SetModelPlacement(model.transform, Array.AsReadOnly(modelBundle.TagPlacements));
+            _modelPlacer.SetModelPlacement(model.transform, modelBundle.TagPlacements);
         }
 
-        UserInterface.Instance.ReportScanFinished(error == null ? "Done!" : error);
+        QRScanningUI.Instance.ReportScanFinished(error == null ? "Done!" : error, isError: false);
     }
 }

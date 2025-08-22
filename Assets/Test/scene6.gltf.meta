@@ -28,4 +28,7 @@ ScriptedImporter:
   - type: 0
     originalUri: Assets/Test/scene6.bin
     assetPath: Assets/Test/scene6.bin
+  - type: 1
+    originalUri: Assets/Test/concrete_colour.jpg
+    assetPath: Assets/Test/concrete_colour.jpg
   reportItems: []
