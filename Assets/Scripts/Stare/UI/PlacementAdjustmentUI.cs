@@ -14,6 +14,8 @@ public class PlacementAdjustmentUI : MonoBehaviour
     [SerializeField] private TMP_InputField _rotationZInput;
     public ModelBundle CurrentModel { get; private set; }
 
+    private const int ReferenceTag = 0;
+
     private void Awake()
     {
         if (Instance != null)
@@ -24,46 +26,26 @@ public class PlacementAdjustmentUI : MonoBehaviour
         Instance = this;
     }
 
-    public void BumpModel(ModelBundle model)
+    public void SetModel(ModelBundle model, bool translation, bool rotation)
     {
         CurrentModel = model;
-    }
-
-    public void OpenTranslationMenu(ModelBundle model)
-    {
-        CurrentModel = model;
-        _translationMenu.SetActive(true);
-    }
-
-    public void CloseTranslationMenu(ModelBundle model)
-    {
-        if (CurrentModel == model)
-            _translationMenu.SetActive(false);
-    }
-
-    public void OpenRotationMenu(ModelBundle model)
-    {
-        CurrentModel = model;
-        _rotationMenu.SetActive(true);
-    }
-
-    public void CloseRotationMenu(ModelBundle model)
-    {
-        if (CurrentModel == model)
-            _rotationMenu.SetActive(false);
+        _translationMenu.SetActive(translation);
+        _rotationMenu.SetActive(rotation);
     }
 
     private void Update()
     {
-        if (CurrentModel != null)
+        bool anyFocused = _translationXInput.isFocused || _translationYInput.isFocused || _translationZInput.isFocused ||
+            _rotationXInput.isFocused || _rotationYInput.isFocused || _rotationZInput.isFocused;
+        if (CurrentModel != null && !anyFocused)
         {
-            TagPlacement tag = CurrentModel.TagPlacements[0];
-            _translationXInput.text = FormatFloat(tag.Position.x);
-            _translationYInput.text = FormatFloat(tag.Position.y);
-            _translationZInput.text = FormatFloat(tag.Position.z);
-            _rotationXInput.text = FormatFloat(tag.Rotation.x);
-            _rotationYInput.text = FormatFloat(tag.Rotation.y);
-            _rotationZInput.text = FormatFloat(tag.Rotation.z);
+            TagPlacement tag = CurrentModel.TagPlacements[ReferenceTag];
+            _translationXInput.text = FormatFloat(-tag.Position.x);
+            _translationYInput.text = FormatFloat(-tag.Position.y);
+            _translationZInput.text = FormatFloat(-tag.Position.z);
+            _rotationXInput.text = FormatFloat(-tag.Rotation.x);
+            _rotationYInput.text = FormatFloat(-tag.Rotation.y);
+            _rotationZInput.text = FormatFloat(-tag.Rotation.z);
         }
     }
 
@@ -84,17 +66,21 @@ public class PlacementAdjustmentUI : MonoBehaviour
 
     private void ChangeTranslation(TMP_InputField field, int axis)
     {
+        if (field.text == "")
+            return;
         float value;
         try
         {
-            value = float.Parse(field.text);
+            value = -float.Parse(field.text);
         }
         catch
         {
-            Debug.LogError("Float parse error: " + field.text);
+            Debug.LogWarning("Float parse error: " + field.text);
             return;
         }
-        CurrentModel.TagPlacements[0].Position[axis] = value;
+        float delta = value - CurrentModel.TagPlacements[ReferenceTag].Position[axis];
+        foreach (TagPlacement t in CurrentModel.TagPlacements)
+            t.Position[axis] += delta;
     }
 
     public void ChangeXRotation()
@@ -114,17 +100,21 @@ public class PlacementAdjustmentUI : MonoBehaviour
 
     private void ChangeRotation(TMP_InputField field, int axis)
     {
+        if (field.text == "")
+            return;
         float value;
         try
         {
-            value = float.Parse(field.text);
+            value = -float.Parse(field.text);
         }
         catch
         {
-            Debug.LogError("Float parse error: " + field.text);
+            Debug.LogWarning("Float parse error: " + field.text);
             return;
         }
-        CurrentModel.TagPlacements[0].Rotation[axis] = value;
+        float delta = value - CurrentModel.TagPlacements[ReferenceTag].Rotation[axis];
+        foreach (TagPlacement t in CurrentModel.TagPlacements)
+            t.Rotation[axis] += delta;
     }
     
     private static string FormatFloat(float f)

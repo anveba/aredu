@@ -6,7 +6,6 @@ public class SettingsMenuUI : MonoBehaviour
 {
     [SerializeField] private GameObject _headsUpDisplay;
     [SerializeField] private GameObject _settingsMenuRoot;
-    [SerializeField] private GameObject _debugDisplay;
 
     [SerializeField] private TMP_InputField _tagSizeInput;
     [SerializeField] private Slider _decimationSlider;
@@ -26,7 +25,7 @@ public class SettingsMenuUI : MonoBehaviour
 
     private void PopulateWithActualValues()
     {
-        _tagSizeInput.text = Settings.Current.TagSize.ToString();
+        _tagSizeInput.text = (Settings.Current.TagSize * 100.0f).ToString();
 
         _decimationSlider.value = Settings.Current.Decimation;
         _decimationValueText.text = _decimationSlider.value.ToString();
@@ -48,6 +47,8 @@ public class SettingsMenuUI : MonoBehaviour
 
     public void ChangeTagSize()
     {
+        if (_tagSizeInput.text == "")
+            return;
         float value;
         try
         {
@@ -55,10 +56,11 @@ public class SettingsMenuUI : MonoBehaviour
         }
         catch
         {
-            Debug.LogError("Float parse error: " + _tagSizeInput.text);
+            Debug.LogWarning("Float parse error: " + _tagSizeInput.text);
             return;
         }
-        Settings.Current.TagSize = value;
+        Settings.Current.TagSize = value / 100.0f;
+        _tagSizeInput.text = FormatFloat(Settings.Current.TagSize * 100.0f);
     }
 
     public void ChangeDecimation()
@@ -69,6 +71,8 @@ public class SettingsMenuUI : MonoBehaviour
 
     public void ChangeResolutionDownscale()
     {
+        if (_downscaleInput.text == "")
+            return;
         float value;
         try
         {
@@ -76,10 +80,11 @@ public class SettingsMenuUI : MonoBehaviour
         }
         catch
         {
-            Debug.LogError("Float parse error: " + _downscaleInput.text);
+            Debug.LogWarning("Float parse error: " + _downscaleInput.text);
             return;
         }
         Settings.Current.Downscaling = value;
+        _downscaleInput.text = FormatFloat(Settings.Current.Downscaling);
     }
 
     public void ChangeSmoothing()
@@ -93,11 +98,11 @@ public class SettingsMenuUI : MonoBehaviour
         bool wasEnabled = _debugInfoSlider.value > 0.5f;
         _debugInfoSlider.value = !wasEnabled == false ? 0.0f : 1.0f;
         Settings.Current.EnableDebug = !wasEnabled;
-        _debugDisplay.SetActive(!wasEnabled);
+        DebugUI.Instance.SetActive(!wasEnabled);
     }
     
     private static string FormatFloat(float f)
     {
-        return string.Format("{0:0.00}", f);
+        return string.Format("{0:0.000}", f);
     }
 }

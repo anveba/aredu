@@ -17,7 +17,7 @@ public class Settings
     private SettingsData _data;
     public float TagSize { get { return _data.TagSize; } set { if (float.IsFinite(value) && value > 0.0f) _data.TagSize = value; } }
     public int Decimation { get { return _data.Decimation; } set { if (value > 0) _data.Decimation = value; } }
-    public float Downscaling { get { return _data.Downscaling; } set { if (float.IsFinite(value) && value > 1.0f) _data.Downscaling = value; } }
+    public float Downscaling { get { return _data.Downscaling; } set { if (float.IsFinite(value) && value >= 1.0f) _data.Downscaling = value; } }
     public float Smoothing { get { return _data.Smoothing; } set { if (float.IsFinite(value) && value >= 0.0f) _data.Smoothing = value; } }
     public bool EnableDebug { get { return _data.EnableDebug; } set { _data.EnableDebug = value; } }
 

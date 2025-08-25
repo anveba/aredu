@@ -10,11 +10,10 @@ public class PlacementAdjuster : MonoBehaviour
     private bool _isSelected = false;
     private int _referenceTag;
 
-    public void SetModel(ModelBundle modelBundle, Transform modelTransform, Transform handleTransform, int referenceTag)
+    public void SetModel(ModelBundle modelBundle, Transform modelTransform, int referenceTag = 0)
     {
         _modelBundle = modelBundle;
         _modelTransform = modelTransform;
-        _handleTransform = handleTransform;
         _referenceTag = referenceTag;
 
         _lastPosition = _handleTransform.position;
@@ -50,8 +49,6 @@ public class PlacementAdjuster : MonoBehaviour
     public void Selected()
     {
         _isSelected = true;
-        if (_modelBundle != null)
-            PlacementAdjustmentUI.Instance.BumpModel(_modelBundle);
     }
 
     public void Deselected()

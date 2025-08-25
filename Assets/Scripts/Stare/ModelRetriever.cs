@@ -7,7 +7,6 @@ using System.Collections.Generic;
 public class ModelRetriever : MonoBehaviour
 {
     [SerializeField] Transform _assetParent;
-    [SerializeField] private GameObject _adjustmentHandlePrefab;
     private List<LoadedModel> loadedModels;
     private GltfImport _importer;
 
@@ -40,19 +39,8 @@ public class ModelRetriever : MonoBehaviour
             obj.transform.parent = parent.transform;
         }
 
-        loadedModels.Add(new LoadedModel(models, parent, CreateAdjustmentHandle(models, parent)));
+        loadedModels.Add(new LoadedModel(models, parent));
         return new(parent, combinedError);
-    }
-
-    private GameObject CreateAdjustmentHandle(ModelBundle models, GameObject parent, int referenceTag = 0)
-    {
-        GameObject handle = Instantiate(_adjustmentHandlePrefab, _assetParent.transform);
-        handle.name = models.Name + "_Handle";
-        handle.SetActive(false);
-
-        PlacementAdjuster adjuster = handle.GetComponent<PlacementAdjuster>();
-        adjuster.SetModel(models, parent.transform, adjuster.transform, referenceTag);
-        return handle;
     }
 
     private async Task<Tuple<GameObject, string>> Retrieve(Model model)

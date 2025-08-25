@@ -71,12 +71,10 @@ public class LoadedModel
 {
     public ModelBundle ModelBundle { get; private set; }
     public GameObject GameObject { get; private set; }
-    public GameObject AdjustmentHandle { get; private set; }
 
-    public LoadedModel(ModelBundle modelBundle, GameObject gameObject, GameObject adjustmentHandle)
+    public LoadedModel(ModelBundle modelBundle, GameObject gameObject)
     {
         ModelBundle = modelBundle;
         GameObject = gameObject;
-        AdjustmentHandle = adjustmentHandle;
     }
 }

@@ -7,6 +7,8 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 public class ModelMenuUI : MonoBehaviour
 {
+    [SerializeField] private GameObject _adjustmentHandle;
+    [SerializeField] private PlacementAdjuster _placementAdjuster;
     [SerializeField] private GameObject _headsUpDisplay;
     [SerializeField] private GameObject _modelMenuRoot;
     [SerializeField] private ModelRetriever _modelRetriever;
@@ -22,6 +24,7 @@ public class ModelMenuUI : MonoBehaviour
     private List<GameObject> _modelButtons;
     private LoadedModel[] _listedModels;
     private int _selectedModel = -1;
+    private int _currentlyAdjusting = -1;
 
     private void Start()
     {
@@ -55,6 +58,18 @@ public class ModelMenuUI : MonoBehaviour
     private void ModelButtonClicked(int i)
     {
         _selectedModel = i;
+        _enableModelSlider.value = _listedModels[_selectedModel].GameObject.activeSelf ? 1.0f : 0.0f;
+        if (_currentlyAdjusting == _selectedModel)
+        {
+            _adjustModelPositionSlider.value = _adjustmentHandle.GetComponent<XRGrabInteractable>().trackPosition ? 1.0f : 0.0f;
+            _adjustModelRotationSlider.value = _adjustmentHandle.GetComponent<XRGrabInteractable>().trackRotation ? 1.0f : 0.0f;
+        }
+        else
+        {
+            _adjustModelPositionSlider.value = 0.0f;
+            _adjustModelRotationSlider.value = 0.0f;
+        }
+
         _modelEditMenu.SetActive(true);
         _modelListRoot.SetActive(false);
         _modelEditMenu.SetActive(true);
@@ -87,24 +102,28 @@ public class ModelMenuUI : MonoBehaviour
     {
         bool wasEnabled = _adjustModelPositionSlider.value > 0.5f;
         _adjustModelPositionSlider.value = wasEnabled ? 0.0f : 1.0f;
-        _listedModels[_selectedModel].AdjustmentHandle.GetComponent<XRGrabInteractable>().trackPosition = !wasEnabled;
-        _listedModels[_selectedModel].AdjustmentHandle.SetActive(!wasEnabled || _adjustModelRotationSlider.value > 0.5f);
-        if (wasEnabled)
-            PlacementAdjustmentUI.Instance.CloseTranslationMenu(_listedModels[_selectedModel].ModelBundle);
-        else
-            PlacementAdjustmentUI.Instance.OpenTranslationMenu(_listedModels[_selectedModel].ModelBundle);
+
+        _placementAdjuster.SetModel(_listedModels[_selectedModel].ModelBundle, _listedModels[_selectedModel].GameObject.transform);
+        _adjustmentHandle.GetComponent<XRGrabInteractable>().trackPosition = !wasEnabled;
+        _adjustmentHandle.GetComponent<XRGrabInteractable>().trackRotation = _adjustModelRotationSlider.value > 0.5f;
+        _adjustmentHandle.SetActive(!wasEnabled || _adjustModelRotationSlider.value > 0.5f);
+        _currentlyAdjusting = _selectedModel;
+
+        PlacementAdjustmentUI.Instance.SetModel(_listedModels[_selectedModel].ModelBundle, _adjustModelPositionSlider.value > 0.5f, _adjustModelRotationSlider.value > 0.5f);
     }
 
     public void AdjustModelRotation()
     {
         bool wasEnabled = _adjustModelRotationSlider.value > 0.5f;
         _adjustModelRotationSlider.value = wasEnabled ? 0.0f : 1.0f;
-        _listedModels[_selectedModel].AdjustmentHandle.GetComponent<XRGrabInteractable>().trackRotation = !wasEnabled;
-        _listedModels[_selectedModel].AdjustmentHandle.SetActive(!wasEnabled || _adjustModelPositionSlider.value > 0.5f);
-        if (wasEnabled)
-            PlacementAdjustmentUI.Instance.CloseRotationMenu(_listedModels[_selectedModel].ModelBundle);
-        else
-            PlacementAdjustmentUI.Instance.OpenRotationMenu(_listedModels[_selectedModel].ModelBundle);
+
+        _placementAdjuster.SetModel(_listedModels[_selectedModel].ModelBundle, _listedModels[_selectedModel].GameObject.transform, 0);
+        _adjustmentHandle.GetComponent<XRGrabInteractable>().trackRotation = _adjustModelPositionSlider.value > 0.5f;
+        _adjustmentHandle.GetComponent<XRGrabInteractable>().trackRotation = !wasEnabled;
+        _adjustmentHandle.SetActive(!wasEnabled || _adjustModelPositionSlider.value > 0.5f);
+        _currentlyAdjusting = _selectedModel;
+
+        PlacementAdjustmentUI.Instance.SetModel(_listedModels[_selectedModel].ModelBundle, _adjustModelPositionSlider.value > 0.5f, _adjustModelRotationSlider.value > 0.5f);
     }
 
     public void CopyJSON()
