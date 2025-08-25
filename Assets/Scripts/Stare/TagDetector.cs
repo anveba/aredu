@@ -78,7 +78,7 @@ public class TagDetector : MonoBehaviour
         _detectorsToDispose = new ConcurrentBag<AprilTag.TagDetector>();
         _stopDetection = false;
 
-        _detectionThread = new Thread(DetectionLoop);
+        _detectionThread = new Thread(DetectionThreadLoop);
         _detectionThread.Start();
     }
 
@@ -117,7 +117,7 @@ public class TagDetector : MonoBehaviour
                 foreach (Detection d in result.Detections)
                     _visualiser.Draw(d.Position, d.Rotation, Settings.Current.TagSize);
             }
-            if (result.DebugInfo != null)
+            if (Time.frameCount % 30 == 0)
                 _debugText.text = result.DebugInfo;
 
             if (result.Detections.Count > 0)
@@ -158,7 +158,7 @@ public class TagDetector : MonoBehaviour
             _decimation = Settings.Current.Decimation;
         }
 
-        if (frame.ImageBuffer.IsEmpty)
+        if (frame.ImageBufferSpan.IsEmpty)
             return;
 
         GetCameraStatusDuringFrame(frame, out Vector3 cameraPosition, out Quaternion cameraRotation, out float fov);
@@ -212,7 +212,7 @@ public class TagDetector : MonoBehaviour
         }
     }
 
-    private void DetectionLoop()
+    private void DetectionThreadLoop()
     {
         while (true)
         {
@@ -229,7 +229,7 @@ public class TagDetector : MonoBehaviour
 
     private static DetectionResult Detect(DetectionParams p)
     {
-        p.Detector.ProcessImage(p.Frame.ImageBuffer, p.FOV, p.TagSize);
+        p.Detector.ProcessImage(p.Frame.ImageBufferSpan, p.FOV, p.TagSize);
 
         Detection[] detections = new Detection[p.Detector.DetectedTags.Count()];
 
@@ -246,9 +246,7 @@ public class TagDetector : MonoBehaviour
             detections[i++] = new Detection(tag.ID, position, rotation, p.Time, p.FrameCount);
         }
 
-        string debugInfo = null;
-        if (p.FrameCount % 30 == 0)
-            debugInfo = p.Detector.ProfileData.Aggregate("AprilTag runtime (usec)", (c, n) => $"{c}\n{n.name}: {n.time}");
+        string debugInfo = p.Detector.ProfileData.Aggregate("AprilTag runtime (usec)", (c, n) => $"{c}\n{n.name}: {n.time}");
 
         return new DetectionResult() { Detections = detections, DebugInfo = debugInfo };
     }

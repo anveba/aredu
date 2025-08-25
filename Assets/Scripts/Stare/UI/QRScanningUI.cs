@@ -12,6 +12,7 @@ public class QRScanningUI : MonoBehaviour
     [SerializeField] private QRCodeReader _qrReader;
     [SerializeField] private QRToModel _qrToModel;
     [SerializeField] private TextMeshProUGUI _qrScanText;
+    [SerializeField] private GameObject _scanFocus;
     [SerializeField] private RectTransform _qrMaskTransform;
     [SerializeField] private CanvasScaler _canvasScaler;
     private Color32 _neutralTextColour = new Color32(255, 255, 255, 255);
@@ -21,7 +22,7 @@ public class QRScanningUI : MonoBehaviour
     {
         if (Instance != null)
         {
-            Debug.LogError("Several UserInterface instances exist! There should only be one.");
+            Debug.LogError("Several instances exist! There should only be one.");
             return;
         }
         Instance = this;
@@ -39,6 +40,7 @@ public class QRScanningUI : MonoBehaviour
         _headsUpDisplay.gameObject.SetActive(false);
         _qrScanMenuRoot.gameObject.SetActive(true);
         _qrStopScanButton.gameObject.SetActive(true);
+        _scanFocus.SetActive(true);
         _qrScanText.text = "Looking for QR code...";
     }
 
@@ -49,6 +51,7 @@ public class QRScanningUI : MonoBehaviour
         _headsUpDisplay.gameObject.SetActive(true);
         _qrScanMenuRoot.gameObject.SetActive(false);
         _qrStopScanButton.gameObject.SetActive(false);
+        _scanFocus.SetActive(false);
         _qrScanText.text = "";
     }
 
@@ -57,6 +60,7 @@ public class QRScanningUI : MonoBehaviour
         _qrReader.gameObject.SetActive(false);
         _qrToModel.gameObject.SetActive(false);
         _qrStopScanButton.gameObject.SetActive(false);
+        _scanFocus.SetActive(false);
         _qrScanText.text = "Importing...";
     }
 
@@ -64,6 +68,8 @@ public class QRScanningUI : MonoBehaviour
     {
         _qrReader.gameObject.SetActive(false);
         _qrToModel.gameObject.SetActive(false);
+        _qrStopScanButton.gameObject.SetActive(false);
+        _scanFocus.SetActive(false);
         _qrScanText.text = message;
         if (isError)
             _qrScanText.faceColor = _errorTextColour;
@@ -78,10 +84,12 @@ public class QRScanningUI : MonoBehaviour
         _qrScanText.faceColor = _neutralTextColour;
     }
 
-    public void SetQRScanMaskSize(float size)
+    public void SetQRScanMaskSize(float size, Matrix4x4? displayMatrix)
     {
-        // The square sometimes won't align with the scanning area. This is due to the acquired image and the image shown
-        // on screen have different FOVs for some reason that I suppose we just have to live with. 
-        _qrMaskTransform.sizeDelta = new Vector2(size, size) * (_canvasScaler.referenceResolution.x / Screen.width);
+        // This might be a sketchy use of the display matrix
+        float displayCorrection = displayMatrix.HasValue && displayMatrix.Value.m01 != 0.0f ? Mathf.Abs(displayMatrix.Value.m01) : 1.0f;
+
+        Vector4 v = new Vector4(size, size, 0, 0) * (_canvasScaler.referenceResolution.x / Screen.width) / displayCorrection;
+        _qrMaskTransform.sizeDelta = new Vector2(Mathf.Abs(v.x), Mathf.Abs(v.y));
     }
 }

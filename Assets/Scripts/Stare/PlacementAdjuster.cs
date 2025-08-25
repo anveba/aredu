@@ -50,6 +50,8 @@ public class PlacementAdjuster : MonoBehaviour
     public void Selected()
     {
         _isSelected = true;
+        if (_modelBundle != null)
+            PlacementAdjustmentUI.Instance.BumpModel(_modelBundle);
     }
 
     public void Deselected()

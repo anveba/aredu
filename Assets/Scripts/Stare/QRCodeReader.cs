@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.UI;
 using ZXing;
 
 public class QRCodeReader : MonoBehaviour {
@@ -10,8 +9,6 @@ public class QRCodeReader : MonoBehaviour {
     [SerializeField] private ARCameraSource _cameraSource;
     [SerializeField] private float _scanWidthFraction = 0.5f;
     private Task<Result> _decoderTask;
-    private Texture2D _cameraTexture;
-    [SerializeField] private RawImage _debug;
 
     private IBarcodeReader _barcodeReader = new BarcodeReader
     {
@@ -75,12 +72,12 @@ public class QRCodeReader : MonoBehaviour {
                 return;
             }
 
-            QRScanningUI.Instance.SetQRScanMaskSize(size);
+            QRScanningUI.Instance.SetQRScanMaskSize(size, frame.DisplayMatrix);
 
             Color32[] trimmed = new Color32[size * size];
             unsafe
             {
-                fixed (Color32* sourcePtr = frame.ImageBuffer)
+                fixed (Color32* sourcePtr = frame.ImageBufferSpan)
                 {
                     fixed (Color32* destPtr = trimmed)
                     {
@@ -93,16 +90,6 @@ public class QRCodeReader : MonoBehaviour {
                     }
                 }
             }
-
-            if (_cameraTexture == null || _cameraTexture.width != frame.Width || _cameraTexture.height != frame.Height)
-            {
-                if (_cameraTexture != null)
-                    Destroy(_cameraTexture);
-                _cameraTexture = new Texture2D(size, size);
-            }
-            _cameraTexture.SetPixels32(trimmed);
-            _cameraTexture.Apply();
-            _debug.texture = _cameraTexture;
 
             // TODO move to its own thread in a loop. It may be idling at some times when using a task like this.
             _decoderTask = Task.Run(() => _barcodeReader.Decode(trimmed, size, size));

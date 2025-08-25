@@ -78,25 +78,33 @@ public class ModelMenuUI : MonoBehaviour
 
     public void EnableModel()
     {
-        bool currentValue = _enableModelSlider.value > 0.5f;
-        _enableModelSlider.value = !currentValue == false ? 0.0f : 1.0f;
-        _listedModels[_selectedModel].GameObject.SetActive(!currentValue);
+        bool wasEnabled = _enableModelSlider.value > 0.5f;
+        _enableModelSlider.value = wasEnabled ? 0.0f : 1.0f;
+        _listedModels[_selectedModel].GameObject.SetActive(!wasEnabled);
     }
 
     public void AdjustModelPosition()
     {
-        bool currentValue = _adjustModelPositionSlider.value > 0.5f;
-        _adjustModelPositionSlider.value = !currentValue == false ? 0.0f : 1.0f;
-        _listedModels[_selectedModel].AdjustmentHandle.GetComponent<XRGrabInteractable>().trackPosition = !currentValue;
-        _listedModels[_selectedModel].AdjustmentHandle.SetActive(!currentValue || _adjustModelRotationSlider.value > 0.5f);
+        bool wasEnabled = _adjustModelPositionSlider.value > 0.5f;
+        _adjustModelPositionSlider.value = wasEnabled ? 0.0f : 1.0f;
+        _listedModels[_selectedModel].AdjustmentHandle.GetComponent<XRGrabInteractable>().trackPosition = !wasEnabled;
+        _listedModels[_selectedModel].AdjustmentHandle.SetActive(!wasEnabled || _adjustModelRotationSlider.value > 0.5f);
+        if (wasEnabled)
+            PlacementAdjustmentUI.Instance.CloseTranslationMenu(_listedModels[_selectedModel].ModelBundle);
+        else
+            PlacementAdjustmentUI.Instance.OpenTranslationMenu(_listedModels[_selectedModel].ModelBundle);
     }
 
     public void AdjustModelRotation()
     {
-        bool currentValue = _adjustModelRotationSlider.value > 0.5f;
-        _adjustModelRotationSlider.value = !currentValue == false ? 0.0f : 1.0f;
-        _listedModels[_selectedModel].AdjustmentHandle.GetComponent<XRGrabInteractable>().trackRotation = !currentValue;
-        _listedModels[_selectedModel].AdjustmentHandle.SetActive(!currentValue || _adjustModelPositionSlider.value > 0.5f);
+        bool wasEnabled = _adjustModelRotationSlider.value > 0.5f;
+        _adjustModelRotationSlider.value = wasEnabled ? 0.0f : 1.0f;
+        _listedModels[_selectedModel].AdjustmentHandle.GetComponent<XRGrabInteractable>().trackRotation = !wasEnabled;
+        _listedModels[_selectedModel].AdjustmentHandle.SetActive(!wasEnabled || _adjustModelPositionSlider.value > 0.5f);
+        if (wasEnabled)
+            PlacementAdjustmentUI.Instance.CloseRotationMenu(_listedModels[_selectedModel].ModelBundle);
+        else
+            PlacementAdjustmentUI.Instance.OpenRotationMenu(_listedModels[_selectedModel].ModelBundle);
     }
 
     public void CopyJSON()

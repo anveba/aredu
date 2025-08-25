@@ -11,7 +11,6 @@ public class ARCameraSource : MonoBehaviour
     [SerializeField] private ARCameraManager _cameraManager;
     [SerializeField] private RawImage _cameraPreview;
     [SerializeField] private bool _createTexture = false;
-    public XRCpuImage.Transformation Transformation { get; private set; }
     private bool _configurationIsSet = false;
 
     public class Frame
@@ -20,31 +19,46 @@ public class ARCameraSource : MonoBehaviour
         public int Width { get; private set; }
         public int Height { get; private set; }
         public float? FOV { get; private set; }
+        public Matrix4x4? DisplayMatrix;
         private Texture2D _cameraTexture;
         public Texture2D Texture => _cameraTexture;
-        private NativeArray<byte> _nativeImageBuffer;
-        public ReadOnlySpan<Color32> ImageBuffer => _nativeImageBuffer.Reinterpret<Color32>(1).AsReadOnlySpan();
+        private ImageBuffer ImageBuffer;
+        public ReadOnlySpan<Color32> ImageBufferSpan => ImageBuffer.NativeBuffer.Reinterpret<Color32>(1).AsReadOnlySpan();
 
-        public Frame(double timestamp, int width, int height, float? fov, NativeArray<byte> nativeImageBuffer, Texture2D texture)
+        public Frame(double timestamp, int width, int height, float? fov, Matrix4x4? displayMatrix, ImageBuffer imageBuffer, Texture2D texture)
         {
             Timestamp = timestamp;
             Width = width;
             Height = height;
             FOV = fov;
-            _nativeImageBuffer = nativeImageBuffer;
+            DisplayMatrix = displayMatrix;
+            ImageBuffer = imageBuffer;
             _cameraTexture = texture;
         }
     }
 
+    public class ImageBuffer
+    {
+        public NativeArray<byte> NativeBuffer { get; private set; }
+
+        public ImageBuffer(NativeArray<byte> nativeBuffer)
+        {
+            NativeBuffer = nativeBuffer;
+        }
+
+        ~ImageBuffer()
+        {
+            NativeBuffer.Dispose();
+        }
+    }
+
     private Texture2D _cameraTexture;
-    private NativeArray<byte> _nativeImageBuffer;
 
     public event Action<Frame> FrameReceived;
 
     private void Start()
     {
         Screen.sleepTimeout = SleepTimeout.NeverSleep;
-        Transformation = SystemInfo.deviceType == DeviceType.Handheld ? XRCpuImage.Transformation.MirrorY : XRCpuImage.Transformation.None;
     }
 
     private void OnEnable()
@@ -59,8 +73,6 @@ public class ARCameraSource : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (_nativeImageBuffer != null)
-            _nativeImageBuffer.Dispose();
         if (_cameraTexture != null)
             Destroy(_cameraTexture);
     }
@@ -81,20 +93,12 @@ public class ARCameraSource : MonoBehaviour
             inputRect = new RectInt(0, 0, image.width, image.height),
             outputDimensions = new Vector2Int((int)(image.width / Settings.Current.Downscaling), (int)(image.height / Settings.Current.Downscaling)),
             outputFormat = TextureFormat.RGBA32,
-            transformation = Transformation
+            transformation = eventArgs.displayMatrix.HasValue ? XRCpuImage.Transformation.MirrorY : XRCpuImage.Transformation.None
         };
 
         int size = image.GetConvertedDataSize(conversionParams);
-
-        if (_nativeImageBuffer == null || _nativeImageBuffer.Length != size)
-        {
-            // TODO disposing here may cause invalid memory accesses
-            if (_nativeImageBuffer != null)
-                _nativeImageBuffer.Dispose();
-            _nativeImageBuffer = new NativeArray<byte>(size, Allocator.Persistent);
-        }
-
-        image.Convert(conversionParams, _nativeImageBuffer);
+        ImageBuffer imageBuffer = new ImageBuffer(new NativeArray<byte>(size, Allocator.Persistent));
+        image.Convert(conversionParams, imageBuffer.NativeBuffer);
 
         if (_createTexture)
         {
@@ -108,7 +112,7 @@ public class ARCameraSource : MonoBehaviour
                     conversionParams.outputFormat,
                     false);
             }
-            _cameraTexture.LoadRawTextureData(_nativeImageBuffer);
+            _cameraTexture.LoadRawTextureData(imageBuffer.NativeBuffer);
             _cameraTexture.Apply();
         }
         else if (_cameraTexture != null)
@@ -120,7 +124,7 @@ public class ARCameraSource : MonoBehaviour
         if (eventArgs.projectionMatrix.HasValue)
             fov = Mathf.Atan(1.0f / eventArgs.projectionMatrix.Value.m11) * 2.0f;
 
-        Frame frame = new Frame(image.timestamp, conversionParams.outputDimensions.x, conversionParams.outputDimensions.y, fov, _nativeImageBuffer, _cameraTexture);
+        Frame frame = new Frame(image.timestamp, conversionParams.outputDimensions.x, conversionParams.outputDimensions.y, fov, eventArgs.displayMatrix, imageBuffer, _cameraTexture);
 
         image.Dispose();
 
@@ -137,11 +141,11 @@ public class ARCameraSource : MonoBehaviour
             return;
 
         XRCameraConfiguration? bestConfig = null;
-        float bestScore = -Mathf.Infinity;
+        long bestScore = long.MinValue;
 
         foreach (XRCameraConfiguration config in configurations)
         {
-            float score = config.width * config.height;
+            long score = config.width * config.height * config.framerate.GetValueOrDefault(1) + (config.depthSensorSupported == Supported.Supported ? 1 << 28 : 0);
             if (score > bestScore)
                 bestConfig = config;
         }
