@@ -3,7 +3,7 @@
   "Models": [
     {
       "Name": "Beam Line",
-      "Uri": "p42.gltf"
+      "Uri": "https://raw.githubusercontent.com/anveba/aredu/refs/heads/master/Assets/Stare/Web/p42.gltf"
     }
   ],
   "TagPlacements": [
