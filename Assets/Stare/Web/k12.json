@@ -3,21 +3,21 @@
   "Models": [
     {
       "Name": "Beam Line",
-      "Uri": "https://raw.githubusercontent.com/anveba/aredu/refs/heads/master/Assets/Stare/Web/k12.gltf"
+      "Uri": "file:/k12.gltf"
     }
   ],
   "TagPlacements": [
     {
       "TagID": 0,
       "Position": {
-        "x": 0,
-        "y": 0,
-        "z": 0
+        "x": -50.0,
+        "y": 0.0,
+        "z": -10.0
       },
       "Rotation": {
-        "x": 90,
-        "y": 0,
-        "z": 0
+        "x": 0.0,
+        "y": 90.0,
+        "z": 0.0
       }
     }
   ]
