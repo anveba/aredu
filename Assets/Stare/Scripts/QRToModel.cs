@@ -41,6 +41,8 @@ public class QRToModel : MonoBehaviour
             return;
         }
 
+        QRScanningUI.Instance.ReportImportStarted();
+
         string json;
         if (result.Text[0] == '{')
         {
@@ -69,7 +71,7 @@ public class QRToModel : MonoBehaviour
             return;
         }
 
-        Debug.Log("Bundle " + modelBundle.Name + " has been read. JSON:\n" + json);
+        Debug.Log("JSON for model bundle " + modelBundle.Name + " has been read:\n" + json);
 
         string error;
         if (!modelBundle.IsValid(out error))
@@ -77,8 +79,6 @@ public class QRToModel : MonoBehaviour
             QRScanningUI.Instance.ReportScanFinished(error, isError: true);
             return;
         }
-
-        QRScanningUI.Instance.ReportImportStarted();
 
         GameObject model;
         (model, error) = await _modelRetriever.Retrieve(modelBundle);
@@ -88,6 +88,6 @@ public class QRToModel : MonoBehaviour
             _modelPlacer.SetModelPlacement(model.transform, modelBundle.TagPlacements);
         }
 
-        QRScanningUI.Instance.ReportScanFinished(error == null ? "Done!" : error, isError: false);
+        QRScanningUI.Instance.ReportScanFinished(error == null ? "Done!" : error, isError: error != null);
     }
 }

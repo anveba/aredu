@@ -3,7 +3,7 @@
   "Models": [
     {
       "Name": "Beam Line",
-      "Uri": "./k12.gltf"
+      "Uri": "https://raw.githubusercontent.com/anveba/aredu/refs/heads/master/Assets/Stare/Web/k12.gltf"
     }
   ],
   "TagPlacements": [

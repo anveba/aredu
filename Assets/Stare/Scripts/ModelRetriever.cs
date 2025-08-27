@@ -53,7 +53,16 @@ public class ModelRetriever : MonoBehaviour
             AnisotropicFilterLevel = 3,
             NodeNameMethod = NameImportMethod.OriginalUnique
         };
-        bool success = await _importer.Load(new Uri(model.Uri), settings);
+
+        bool success;
+        try
+        {
+            success = await _importer.Load(new Uri(model.Uri), settings);
+        }
+        catch (Exception e)
+        {
+            return new(null, "Failed to retrieve model " + model.Name + " at " + model.Uri + ": " + e.Message);
+        }
 
         if (!success)
         {
