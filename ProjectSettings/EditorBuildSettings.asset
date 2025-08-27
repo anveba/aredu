@@ -15,7 +15,7 @@ EditorBuildSettings:
     path: Assets/Scenes/MyScene.unity
     guid: 785521027867246cfb02d2a50963cbc2
   - enabled: 1
-    path: Assets/Scenes/StareScene.unity
+    path: Assets/Stare/StareScene.unity
     guid: 2d423323451734ba69e8052f1bbc80ae
   m_configObjects:
     UnityEditor.XR.ARCore.ARCoreSettings: {fileID: 11400000, guid: 6ee72d15cf39dd748a13eac57397b9af,

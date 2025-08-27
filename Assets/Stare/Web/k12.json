@@ -1,0 +1,24 @@
+{
+  "Name": "K12 Beam Line",
+  "Models": [
+    {
+      "Name": "Beam Line",
+      "Uri": "k12.gltf"
+    }
+  ],
+  "TagPlacements": [
+    {
+      "TagID": 0,
+      "Position": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "Rotation": {
+        "x": 90,
+        "y": 0,
+        "z": 0
+      }
+    }
+  ]
+}
