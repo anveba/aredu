@@ -3,7 +3,7 @@
   "Models": [
     {
       "Name": "Beam Line",
-      "Uri": "file:/k12.gltf"
+      "Uri": "./k12.gltf"
     }
   ],
   "TagPlacements": [
