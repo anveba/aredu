@@ -29,11 +29,9 @@ ScriptedImporter:
     originalUri: Assets/Stare/Web/p42.bin
     assetPath: Assets/Stare/Web/p42.bin
   - type: 1
-    originalUri: Assets/Stare/Web/histogram_background.png
-    assetPath: 
+    originalUri: Assets/Stare/Web/bamboo_colour.jpg
+    assetPath: Assets/Stare/Web/bamboo_colour.jpg
   reportItems:
-  - type: 0
-    code: 43
-    messages:
-    - Couldn't load texture at Assets/Stare/Web/histogram_background.png
-    - 0
+  - type: 2
+    code: 19
+    messages: []

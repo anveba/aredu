@@ -67,16 +67,18 @@ public class ModelPlacer : MonoBehaviour
                     q.Dequeue();
                 q.Enqueue(tag);
             }
+
+            if (EnableStaling)
+            {
+                var q = _accumulatedDetections[tag.TagID];
+                while (q.Count > 0 && Time.time - q.Peek().Timestamp > Settings.Current.Smoothing)
+                    q.Dequeue();
+            }
         }
     }
 
     private void Update()
     {
-        if (EnableStaling)
-            foreach (var q in _accumulatedDetections.Values)
-                while (q.Count > 0 && Time.time - q.Peek().Timestamp > Settings.Current.Smoothing)
-                    q.Dequeue();
-
         UpdateTagTransforms();
         UpdateModelTransforms();
     }
